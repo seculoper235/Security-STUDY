@@ -1,0 +1,51 @@
+package com.example.demo.Domain;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.Collection;
+
+/* UserDetails 란?
+ * Security 객체로 사용하기에 꼭 필요한 필ㄷ/메소드만 모아놓은 인터페이스이다
+ * 오버라이드만 빼면 설졍이 매우 자유로우며 간편하다.
+ * 하지만 필요한 것은 일일히 다 작성해줘야 한다는 단점이 있다.
+ */
+public class SecurityPeopleDetails implements UserDetails {
+    public SecurityPeopleDetails() {
+
+    }
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return null;
+    }
+
+    @Override
+    public String getPassword() {
+        return null;
+    }
+
+    @Override
+    public String getUsername() {
+        return null;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return false;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return false;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return false;
+    }
+}

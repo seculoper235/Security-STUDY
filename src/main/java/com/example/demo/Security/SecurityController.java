@@ -1,6 +1,9 @@
-package com.example.demo;
+package com.example.demo.Security;
 
+import com.example.demo.Domain.SecurityPeople;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -10,8 +13,8 @@ public class SecurityController {
         return ("<h2>Welcome!</h2>");
     }
 
-    @GetMapping("/user")
-    public String user() {
+    @PostMapping("/user")
+    public String user(@AuthenticationPrincipal SecurityPeople securityPeople) {
         return ("<h2>Welcome User!</h2>");
     }
 

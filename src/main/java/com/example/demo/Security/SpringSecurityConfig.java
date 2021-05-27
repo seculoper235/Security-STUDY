@@ -1,5 +1,11 @@
 package com.example.demo.Security;
 
+import com.example.demo.Security.Handler.MyFailHandler;
+import com.example.demo.Security.Handler.MyLogoutHandler;
+import com.example.demo.Security.Handler.MyLogoutSuccessHandler;
+import com.example.demo.Security.Handler.MySucessHandler;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -7,23 +13,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.authentication.logout.LogoutHandler;
-import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 /* WebSecurityConfigurerAdapter란?
  * SecurityConfigurer의 구현체로, 구현체에는 여러 종류가 있는데 Web 상의 보안을 설정하는데 특화되어 있는 추상 클래스이다.
  * configure 메소드로 auth를 설정하거나, url 별로 보안을 설정하거나, 보안 필터를 등록하는 등의 보안 관련 모든 설정을 담당한다.
@@ -51,53 +47,20 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login")
                 // 로그아웃 요청을 어떻게 처리할지 작성(여기선 세션을 삭제해버림)
-                .addLogoutHandler(new LogoutHandler() {
-                    @Override
-                    public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-                        HttpSession session = request.getSession();
-                        session.invalidate();
-                    }
-                })
+                .addLogoutHandler(myLogoutHandler())
                 // 로그아웃 성공후, 진행작 작업을 작성
-                .logoutSuccessHandler(new LogoutSuccessHandler() {
-                    @Override
-                    public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-                        response.sendRedirect("/login");
-                    }
-                });
+                .logoutSuccessHandler(myLogoutSuccessHandler());
 
         // 로그인 관련
         http.formLogin()
-                .failureUrl("/login")
+                .failureForwardUrl("/login")
                 //.loginPage("/login")
                 // 로그인 처리 URL(로그인 페이지를 따로 제작할 경우, form action을 이 URL로 설정하면 된다
                //.loginProcessingUrl("/login_proc")
                 // 인증이 성공한 다음 어떻게 처리할지를 작성한다
-                //(권한별로 다른 페이지를 제공)
-                .successHandler(new AuthenticationSuccessHandler() {
-                    @Override
-                    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-                        System.out.println("Authentication Success! Hello " + authentication.getName());
-                        System.out.println("사용자 권한 확인 : " + request.isUserInRole("ROLE_ADMIN"));
-                        if(authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-                            response.sendRedirect("/admin");
-                        }
-                        else if(authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_USER"))) {
-                            response.sendRedirect("/users");
-                        }
-                        else {
-                            response.sendRedirect("/");
-                        }
-                    }
-                })
+                .successHandler(mySucessHandler())
                 // 인증이 실패했을 때, 어떻게 처리할지를 작성한다
-                .failureHandler(new AuthenticationFailureHandler() {
-                    @Override
-                    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-                        System.out.println("Authentication ERROR!");
-                        response.sendRedirect("/login");
-                    }
-                })
+                .failureHandler(myFailHandler())
                 .permitAll();
 
         // 예외 처리
@@ -110,19 +73,40 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         http.authorizeRequests()
                 .antMatchers("/admin").hasRole("ADMIN")
                 .antMatchers("/users").hasAnyRole("USER", "ADMIN")
-                .antMatchers("/", "static/css", "static/js").permitAll()
+                .anyRequest().permitAll()
                 ;
     }
 
-    /* WebSecurity와 관련된 것들을 설정한다
-     * (Filter, httpfirewall, SecurityInterceptor 등) */
+    /* 스프링 시큐리티보다 앞 단의 설정을 담당한다. 즉 애플리케이션 보안이 아닌, HTTP 방화벽 등을 설정한다.
+     * 정적 리소스는 보안에 구애되지 않고 누구나 볼 수 있어야하므로, 보통 정적 리소스를 설정할 때 사용한다.
+     * 정적 리소스는 requestMatchers()로 설정할 수 있다.
+     */
     @Override
     public void configure(WebSecurity web) throws Exception {
-        super.configure(web);
+        web.ignoring()
+                .requestMatchers(PathRequest.toStaticResources().atCommonLocations());
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return NoOpPasswordEncoder.getInstance();
+    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    MySucessHandler mySucessHandler() {
+        return new MySucessHandler();
+    }
+    @Bean
+    MyFailHandler myFailHandler() {
+        return new MyFailHandler();
+    }
+
+    @Bean
+    MyLogoutHandler myLogoutHandler() {
+        return new MyLogoutHandler();
+    }
+    @Bean
+    MyLogoutSuccessHandler myLogoutSuccessHandler() {
+        return new MyLogoutSuccessHandler();
     }
 }

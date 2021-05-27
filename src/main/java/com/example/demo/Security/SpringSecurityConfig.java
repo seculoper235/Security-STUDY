@@ -25,16 +25,21 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
     /* 내부에서 인증을 어떤 방식(인메모리, JDBC 등)으로 어떻게 진행할지 설정한다. */
+    /* does not look like BCrypt 에러?
+     * builder 패턴으로 정의한 Encoder는 인증을 요청한 큰의 비밀번호를 암호화하는 것이다.
+     * 그런데 정작 .password()의 DB 비밀번호는 암호화 되어있지 않다.
+     * 즉, request 비밀번호는 BCrypt 암호화 되어있는데, DB 비밀번호는 raw 형식이니 암호화 오류가 뜨는 것이다!
+     * 이 경우, .password()의 DB 비밀번호도 동일하게 암호화 시켜주면 된다 */
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.inMemoryAuthentication()
                 .passwordEncoder(bCryptPasswordEncoder())
                 .withUser("user")
-                .password("pass")
+                .password(bCryptPasswordEncoder().encode("pass"))
                 .roles("USER")
                 .and()
                 .withUser("admin")
-                .password("admin")
+                .password(bCryptPasswordEncoder().encode("admin"))
                 .roles("ADMIN");
     }
 

@@ -1,6 +1,9 @@
 package com.example.demo.Domain;
 
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
+
+import java.util.Collection;
 
 /* User 란?
  * 사용의 편의성을 위해 UserDetails를 구현한 클래스이다.
@@ -8,11 +11,7 @@ import org.springframework.security.core.userdetails.User;
  * 하지만 자유 설정에 제약이 있으며, 보이지 않는 기능이 있어서 잘못 사용하면 코드가 꼬일 수 있다.
  */
 public class SecurityPeople extends User {
-    private String nickname;
-
-    public SecurityPeople(People people) {
-        super(people.getUsername(), people.getPassword(), people.getAuthorities());
-
-        this.nickname = people.getNickname();
+    public SecurityPeople(String username, String password, Collection<? extends GrantedAuthority> authorities) {
+        super(username, password, authorities);
     }
 }

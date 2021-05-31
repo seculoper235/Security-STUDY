@@ -2,6 +2,7 @@ package com.example.demo.Service;
 
 import com.example.demo.Domain.SecurityPeople;
 import com.example.demo.Domain.People;
+import com.example.demo.Domain.SecurityPeopleDetails;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -20,6 +21,6 @@ public class PeopleDetailsService implements UserDetailsService {
         People people = new People();
 
         // Security 전용 객체에 DB 객체를 옮겨 담아서 리턴
-        return new SecurityPeople(people);
+        return new SecurityPeopleDetails(people);
     }
 }

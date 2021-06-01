@@ -8,12 +8,12 @@ import org.springframework.security.core.Authentication;
 @Getter
 @NoArgsConstructor
 public class PeopleResponse {
-    private Authentication authInfo;
+    private String username;
     private boolean isAuthenticated;
 
     @Builder
-    public PeopleResponse(Authentication authInfo, boolean isAuthenticated) {
-        this.authInfo = authInfo;
+    public PeopleResponse(String username, boolean isAuthenticated) {
+        this.username = username;
         this.isAuthenticated = isAuthenticated;
     }
 }

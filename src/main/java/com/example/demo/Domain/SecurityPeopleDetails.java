@@ -1,6 +1,6 @@
 package com.example.demo.Domain;
 
-import com.example.demo.Security.MyAuthority;
+import com.example.demo.Security.Dto.MyAuthority;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -28,8 +28,7 @@ public class SecurityPeopleDetails implements UserDetails {
             collection.add(new GrantedAuthority() {
                 @Override
                 public String getAuthority() {
-                    MyAuthority authority = myAuthority;
-                    return authority.getRole();
+                    return myAuthority.getRole();
                 }
             });
         }
@@ -48,21 +47,21 @@ public class SecurityPeopleDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return false;
+        return true;
     }
 }

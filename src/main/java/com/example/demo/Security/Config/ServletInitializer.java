@@ -1,4 +1,4 @@
-package com.example.demo.Security;
+package com.example.demo.Security.Config;
 
 import com.example.demo.DemoApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;

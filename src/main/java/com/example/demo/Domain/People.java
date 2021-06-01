@@ -1,6 +1,6 @@
 package com.example.demo.Domain;
 
-import com.example.demo.Security.MyAuthority;
+import com.example.demo.Security.Dto.MyAuthority;
 import lombok.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +33,8 @@ public class People {
 
     @OneToMany(mappedBy = "people")
     private Set<MyAuthority> authorities;
+
+    private boolean enabled;
 
     /* 일반 DB 속성 */
     private String username;

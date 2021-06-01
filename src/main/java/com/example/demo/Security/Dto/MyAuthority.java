@@ -1,4 +1,4 @@
-package com.example.demo.Security;
+package com.example.demo.Security.Dto;
 
 import com.example.demo.Domain.People;
 import lombok.EqualsAndHashCode;

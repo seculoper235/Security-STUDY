@@ -1,18 +1,18 @@
-package com.example.demo.Service;
+package com.example.demo.Security.Service;
 
 import com.example.demo.Domain.Dto.PeopleDto;
 import com.example.demo.Domain.Dto.PeopleRequest;
 import com.example.demo.Domain.Dto.PeopleResponse;
 import com.example.demo.Domain.People;
+import com.example.demo.Exception.NoSuchException;
 import com.example.demo.Repository.PeopleRepository;
-import com.example.demo.Security.MyUPAuthenticationProvider;
+import com.example.demo.Security.Config.MyUPAuthenticationProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
@@ -29,7 +29,7 @@ public class SecurityService {
                 .build();
         Optional<People> people = peopleRepository.findById(peopleDto.getUsername());
         if(people.isEmpty()) {
-            throw new NoSuchElementException();
+            throw new NoSuchException();
         }
 
         return formAuthentication(peopleDto);
@@ -43,7 +43,7 @@ public class SecurityService {
         // 인증된 토큰의 사용자 정보를 쉽게 꺼낼 수 있도록 SecurityContext에 저장
         SecurityContextHolder.getContext().setAuthentication(token);
         return PeopleResponse.builder()
-                .authInfo(token)
+                .username((String) token.getPrincipal())
                 .isAuthenticated(token.isAuthenticated())
                 .build();
     }

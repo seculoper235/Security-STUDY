@@ -24,13 +24,13 @@ public class MySucessHandler implements AuthenticationSuccessHandler {
         System.out.println("Authentication Success! Hello " + authentication.getName());
         System.out.println("사용자 권한 확인 : " + authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
         if(authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            response.sendRedirect("/admin");
+            response.sendRedirect("/auth/admin");
         }
         else if(authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_USER"))) {
-            response.sendRedirect("/users");
+            response.sendRedirect("/auth/users");
         }
         else {
-            response.sendRedirect("/");
+            response.sendRedirect("/auth");
         }
     }
 }

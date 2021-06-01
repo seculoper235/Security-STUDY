@@ -1,17 +1,16 @@
-package com.example.demo.Security;
+package com.example.demo.Security.Controller;
 
 import com.example.demo.Domain.Dto.PeopleRequest;
 import com.example.demo.Domain.Dto.PeopleResponse;
-import com.example.demo.Service.SecurityService;
+import com.example.demo.Security.Service.SecurityService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping(value = "/auth", consumes = MediaType.APPLICATION_JSON_VALUE)
 public class SecurityController {
     private final SecurityService securityService;
 
@@ -36,7 +35,17 @@ public class SecurityController {
     }
 
     @GetMapping("/denied")
-    public String error() {
+    public String error1() {
         return ("<h2>부적절한 접근입니다!!</h2>");
+    }
+
+    @GetMapping("/except")
+    public String error2() {
+        return ("<h2>예외 처리입니다!!</h2>");
+    }
+
+    @GetMapping("/failed")
+    public String error3() {
+        return ("<h2>로그인 실패입니다!!</h2>");
     }
 }

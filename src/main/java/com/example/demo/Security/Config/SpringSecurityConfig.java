@@ -6,7 +6,7 @@ import com.example.demo.Security.Handler.MyFailHandler;
 import com.example.demo.Security.Handler.MyLogoutHandler;
 import com.example.demo.Security.Handler.MyLogoutSuccessHandler;
 import com.example.demo.Security.Handler.MySucessHandler;
-import com.example.demo.Security.Service.PeopleDetailsService;
+import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
@@ -40,7 +40,7 @@ import static com.example.demo.Security.Config.QueryState.SELECT_USER;
  * configure 메소드로 auth를 설정하거나, url 별로 보안을 설정하거나, 보안 필터를 등록하는 등의 보안 관련 모든 설정을 담당한다.
  * 또한 별도의 커스텀 SecurityConfigurer를 생성하고, 이 클래스에 Bean 등록하여 사용할 수 있다. */
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
-    private final PeopleDetailsService peopleDetailsService;
+    private final OauthService oauthService;
     private final DataSource dataSource;
 
 
@@ -71,22 +71,16 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
         // 로그아웃 관련
         http.logout()
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login")
                 // 로그아웃 요청을 어떻게 처리할지 작성(여기선 세션을 삭제해버림)
                 .addLogoutHandler(myLogoutHandler())
                 // 로그아웃 성공후, 진행작 작업을 작성
                 .logoutSuccessHandler(myLogoutSuccessHandler());
 
         // 로그인 관련
-        http.formLogin()
+        http.oauth2Login()
                 // 로그인 처리 URL(로그인 페이지를 따로 제작할 경우, form action을 이 URL로 설정하면 된다
-               .loginProcessingUrl("/auth/loginProc")
-                // 인증이 성공한 다음 어떻게 처리할지를 작성한다
-                .successHandler(mySucessHandler())
-                // 인증이 실패했을 때, 어떻게 처리할지를 작성한다
-                .failureHandler(myFailHandler())
-                .permitAll();
+               .userInfoEndpoint()
+                .userService(oauthService);
 
         // 예외 처리
         http.exceptionHandling()

@@ -19,23 +19,21 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor
 @Table(name = "people")
-@EqualsAndHashCode(of = "username")
+@EqualsAndHashCode(of = "id")
 public class People {
-    /* 시큐리티 속성 */
     private static final long serialVersionUID = SpringSecurityCoreVersion.SERIAL_VERSION_UID;
 
     private static final Log logger = LogFactory.getLog(User.class);
 
+    /* OAuth 범위 필드 */
     @Id
     private String id;
 
-    private String password;
+    private String email;
 
+    private String image;
+
+    /* Security 전용 필드 */
     @OneToMany(mappedBy = "people")
     private Set<MyAuthority> authorities;
-
-    private boolean enabled;
-
-    /* 일반 DB 속성 */
-    private String username;
 }

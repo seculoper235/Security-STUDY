@@ -26,14 +26,31 @@ public class People {
     private static final Log logger = LogFactory.getLog(User.class);
 
     /* OAuth 범위 필드 */
-    @Id
-    private String id;
-
     private String email;
 
     private String image;
 
     /* Security 전용 필드 */
+    @Id
+    private String id;
+
+    private String username;
+
+    private String password;
+
+    private String description;
+
     @OneToMany(mappedBy = "people")
     private Set<MyAuthority> authorities;
+
+    @Builder
+    public People(String email, String image, String id, String username, String password, String description, Set<MyAuthority> authorities) {
+        this.email = email;
+        this.image = image;
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.description = description;
+        this.authorities = authorities;
+    }
 }

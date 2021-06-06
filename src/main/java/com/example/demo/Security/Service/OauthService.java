@@ -14,6 +14,8 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import java.util.NoSuchElementException;
+
 @Service
 @RequiredArgsConstructor
 public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
@@ -49,8 +51,25 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
         // 왜 바로 Entity에 담지 않을까?
         // -> 엔티티는 DB와 창구 역할을 하는 객체이므로, 외부 값을 직접 Entity에 담는 것은 좋지 않다.
         //    Dto를 거쳐 Mapper로 담는 것이 코드의 확작성에도 좋고 보기에도 깔끔하다.
-        People people = PeopleMapper.toEntity(peopleDto);
+        People people = savePeople(peopleDto);
 
         return new DefaultOAuth2User(oAuth2User.getAuthorities(), oAuth2User.getAttributes(), attributeName);
+    }
+
+    public People savePeople(PeopleDto peopleDto) {
+        // save 헐 때, 한 번 조회하고 저장하는 이유?
+        // 그냥 save의 기능만 있다면 모르겠지만, 이 경우 해당 Social 계정 정보가 바뀔수도 있으므로 update의 기능도 필요하다
+        // 이때 update 시에는 보통 id 값과 변경되는 값만을 Entity에 담아서 저장하는데, 사실 권장되는 방법은 아니다.
+        // 수정이든 저장이든 모두 save 메소드로 할 수 있는 이유는 JPA는 내부적으로 영속성 컨텍스트에서 먼저 엔티티를 불러와서
+        // 있으면 update를 하고, 없다면 save를 하여 저장을 한다.
+        // 따라서 이러한 점 때문에 먼저 find로 엔티티를 불러오고 해당 필드를 수정하여 save하는 것이 의미적으로 좀 더 바람직 하다고 할 수 있다.
+        People people = peopleRepository.findByUsername(peopleDto.getUsername())
+                .map(entity -> entity.builder()
+                                    .email(peopleDto.getEmail())
+                                    .image(peopleDto.getImage())
+                                    .build())
+                .orElseThrow(NoSuchElementException::new);
+
+        return peopleRepository.save(people);
     }
 }

@@ -17,17 +17,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.access.AccessDeniedHandler;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
-
-import java.io.IOException;
 
 import static com.example.demo.Security.Config.QueryState.SELECT_AUTH;
 import static com.example.demo.Security.Config.QueryState.SELECT_USER;
@@ -71,31 +63,13 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
 
         // 로그아웃 관련
         http.logout()
-                // 로그아웃 요청을 어떻게 처리할지 작성(여기선 세션을 삭제해버림)
-                .addLogoutHandler(myLogoutHandler())
-                // 로그아웃 성공후, 진행작 작업을 작성
-                .logoutSuccessHandler(myLogoutSuccessHandler());
+                .logoutSuccessUrl("/auth");
 
         // 로그인 관련
         http.oauth2Login()
                 // 로그인 처리 URL(로그인 페이지를 따로 제작할 경우, form action을 이 URL로 설정하면 된다
                .userInfoEndpoint()
                 .userService(oauthService);
-
-        // 예외 처리
-        http.exceptionHandling()
-                .authenticationEntryPoint(new AuthenticationEntryPoint() {
-                    @Override
-                    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-                        throw new AuthFailException();
-                    }
-                })
-                .accessDeniedHandler(new AccessDeniedHandler() {
-                    @Override
-                    public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException, ServletException {
-                        throw new AuthForbiddenException();
-                    }
-                });
 
         // 사용자 인가 정보
         // hasRole : 해당하는 권한을 가지면 인가 성공
@@ -113,7 +87,7 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
      * 정적 리소스는 requestMatchers()로 설정할 수 있다.
      */
     @Override
-    public void configure(WebSecurity web) throws Exception {
+    public void configure(WebSecurity web){
         web.ignoring()
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations());
     }
@@ -121,23 +95,5 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    MySucessHandler mySucessHandler() {
-        return new MySucessHandler();
-    }
-    @Bean
-    MyFailHandler myFailHandler() {
-        return new MyFailHandler();
-    }
-
-    @Bean
-    MyLogoutHandler myLogoutHandler() {
-        return new MyLogoutHandler();
-    }
-    @Bean
-    MyLogoutSuccessHandler myLogoutSuccessHandler() {
-        return new MyLogoutSuccessHandler();
     }
 }

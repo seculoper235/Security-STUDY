@@ -3,6 +3,7 @@ package com.example.demo.Security.Service;
 import com.example.demo.Domain.Dto.PeopleDto;
 import com.example.demo.Domain.People;
 import com.example.demo.Repository.PeopleRepository;
+import com.example.demo.Security.Dto.GooglePeople;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -12,12 +13,14 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpSession;
 import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
 public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
     private final PeopleRepository peopleRepository;
+    private final HttpSession httpSession;
     /* form 방식의 loadByUserName()과 동일하게 입력을 받아 인증 전용 객체를 반환하는 역할이다.
      * 파라미터: oauthUserRequest
      * - 여기에 OAuthToken 정보나, 클라이언트 등록 정보가 담겨있다.
@@ -50,8 +53,12 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
         // -> 엔티티는 DB와 창구 역할을 하는 객체이므로, 외부 값을 직접 Entity에 담는 것은 좋지 않다.
         //    Dto를 거쳐 Mapper로 담는 것이 코드의 확작성에도 좋고 보기에도 깔끔하다.
         People people = savePeople(peopleDto);
+        httpSession.setAttribute("people", new GooglePeople(people));
 
-        return new DefaultOAuth2User(oAuth2User.getAuthorities(), peopleDto.getAttributes(), peopleDto.getNameAttributeKey());
+        return new DefaultOAuth2User(
+                oAuth2User.getAuthorities(),
+                peopleDto.getAttributes(),
+                peopleDto.getNameAttributeKey());
     }
 
     public People savePeople(PeopleDto peopleDto) {
@@ -65,10 +72,7 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
         /* 이메일로 찾는 이유? */
         // 여기서 이메일이란 Social 계정 정보이고 Social 계정에선 이메일이 곧 Id 이기 때문에, 이메일로 계정을 찾았다.
         People people = peopleRepository.findPeopleByEmail(peopleDto.getEmail())
-                .map(entity -> People.builder()
-                                    .email(peopleDto.getUsername())
-                                    .image(peopleDto.getImage())
-                                    .build())
+                .map(entity -> entity.oAuthData(peopleDto.getImage(), peopleDto.getUsername()))
                 .orElseThrow(NoSuchElementException::new);
 
         return peopleRepository.save(people);

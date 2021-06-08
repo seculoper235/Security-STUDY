@@ -53,4 +53,11 @@ public class People {
         this.description = description;
         this.authorities = authorities;
     }
+
+    public People oAuthData(String image, String username) {
+        this.image = image;
+        this.username = username;
+
+        return this;
+    }
 }

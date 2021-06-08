@@ -1,17 +1,10 @@
 package com.example.demo.Security.Config;
 
-import com.example.demo.Exception.AuthFailException;
-import com.example.demo.Exception.AuthForbiddenException;
-import com.example.demo.Security.Handler.MyFailHandler;
-import com.example.demo.Security.Handler.MyLogoutHandler;
-import com.example.demo.Security.Handler.MyLogoutSuccessHandler;
-import com.example.demo.Security.Handler.MySucessHandler;
 import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;

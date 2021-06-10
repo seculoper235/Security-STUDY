@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.session.SimpleRedirectInvalidSessionStrategy;
 
 import javax.sql.DataSource;
 
@@ -28,19 +29,10 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     private final OauthService oauthService;
     private final DataSource dataSource;
 
-
-    /* 내부에서 인증을 어떤 방식(인메모리, JDBC 등)으로 어떻게 진행할지 설정한다. */
-    /* does not look like BCrypt 에러?
-     * builder 패턴으로 정의한 Encoder는 인증을 요청한 큰의 비밀번호를 암호화하는 것이다.
-     * 그런데 정작 .password()의 DB 비밀번호는 암호화 되어있지 않다.
-     * 즉, request 비밀번호는 BCrypt 암호화 되어있는데, DB 비밀번호는 raw 형식이니 암호화 오류가 뜨는 것이다!
-     * 이 경우, .password()의 DB 비밀번호도 동일하게 암호화 시켜주면 된다 */
-    /* JDBC 방식 사용하기
-     * 인메모리에서는 username, password, authority를 모두 직접 지정해주었다.
-     * 하지만 JDBC는 DB에서 꺼내오는 방식이어야 하므로, 코드도 이에 맞게 쿼리문을 작성해주면 된다. */
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         // DB를 사용할 수 있도록 먼저 datasource를 입력한다. 해당 데이터 소스는 application.properties에서 작성할 수 있다.
+        // usersBy로 People Entity를 검색하고, authoirutiesBy로 권한 Entity를 검색한다.
         auth.jdbcAuthentication()
                 .dataSource(dataSource)
                 .rolePrefix("ROLE_")
@@ -54,25 +46,40 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable();
 
+        /* 세션을 관리하기 위한 빌더 패턴이다.
+         * 최대 세션은 1개이고, 동시에 세션을 접속할 순 없다.
+         * SessionFixation은 세션 고정 공격의 대응 방안을 의미하며, 이 공격은 attacker의 세션 ID로 victim이 로그인 함으로써 세션을 공유하게 되는 공격이다.
+         * 스프링 시큐리티에서는 접속 시마다 세션을 새로 발급하는 방법을 제공하며, 이전 세션이 사용 불가능한 newSession()과 가능한 changeSessionId()가 있다. */
+        http.sessionManagement()
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+                .and()
+                .sessionFixation()
+                    .newSession()
+        ;
+
         // 로그아웃 관련
         http.logout()
-                .logoutSuccessUrl("/auth");
+                .logoutUrl("/")
+                .logoutSuccessUrl("/auth")
+        ;
 
-        // 로그인 관련
+        /* 로그인 관련
+         * OAuth 인증은 form과 달리 엔드포인트와 연결되는데, 이 엔드포인트에는 Token, Redirection, Authorization, UserInfo 4가지가 있다. */
         http.oauth2Login()
-                // 로그인 처리 URL(로그인 페이지를 따로 제작할 경우, form action을 이 URL로 설정하면 된다
-               .userInfoEndpoint()
-                .userService(oauthService);
+                // userInfoEndpoint는 현재 서버에서 Social 계정의 정보를 어떻게 다룰지를 설정할 수 있다.
+                // 여기서 바로 UserService를 등록할 수 있으며, 전달받은 OAuth 전용 객체를 Entity로 바꿔 저장하는 loadUser() 메소드가 사용된다.
+                .userInfoEndpoint()
+                .userService(oauthService)
+        ;
 
-        // 사용자 인가 정보
-        // hasRole : 해당하는 권한을 가지면 인가 성공
-        // hasAnyRole : 해당하는 권한들 중 "하나만 있어도" 인가 성공
+        // 권한 정보
         http.authorizeRequests()
                 .antMatchers("/auth/admin").hasRole("ADMIN")
                 .antMatchers("/auth/users").hasAnyRole("USER", "ADMIN")
                 .antMatchers("/auth").hasAnyRole("USER", "ADMIN")
                 .anyRequest().permitAll()
-                ;
+        ;
     }
 
     /* 스프링 시큐리티보다 앞 단의 설정을 담당한다. 즉 애플리케이션 보안이 아닌, HTTP 방화벽 등을 설정한다.

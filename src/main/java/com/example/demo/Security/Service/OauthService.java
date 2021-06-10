@@ -68,9 +68,6 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
         // 수정이든 저장이든 모두 save 메소드로 할 수 있는 이유는 JPA는 내부적으로 영속성 컨텍스트에서 먼저 엔티티를 불러와서
         // 있으면 update를 하고, 없다면 save를 하여 저장을 한다.
         // 따라서 이러한 점 때문에 먼저 find로 엔티티를 불러오고 해당 필드를 수정하여 save하는 것이 의미적으로 좀 더 바람직 하다고 할 수 있다.
-
-        /* 이메일로 찾는 이유? */
-        // 여기서 이메일이란 Social 계정 정보이고 Social 계정에선 이메일이 곧 Id 이기 때문에, 이메일로 계정을 찾았다.
         People people = peopleRepository.findPeopleByEmail(peopleDto.getEmail())
                 .map(entity -> entity.oAuthData(peopleDto.getImage(), peopleDto.getUsername()))
                 .orElseThrow(NoSuchElementException::new);

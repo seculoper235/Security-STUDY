@@ -28,18 +28,24 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
      * - OAuth 인증 전용 객체로, 보통 DefaultOAuth2User를 반환한다.
      * 메소드 요약
      * - OauthRequest를 가지고 DefaultOAuthUser()에 값을 담아 객체를 생성한다. 이때 OAuth 인증에 필요한 권한들, 이름이나 여러 속성들(이메일, 프로필 이미지 등)을 설정한다.
+     *   또한 이를 오버라이드하여 원하는 작업을 추가로 진행할 수 있다.
      */
     @Override
     public OAuth2User loadUser(OAuth2UserRequest oAuth2UserRequest) throws OAuth2AuthenticationException {
-        // 우선 DefaultOAuthUserService로 OAuth 전용 객체를 반환함
+        /* 기본적인 loadUser 메소드 실행 */
+        // 우선 기본적으로 실행되는 loadUser()를 실행하고, 이후 원하는 작업을 추가로 진행한다.
+        // (DB에 데이터 저장, 세션 저장 등)
         OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = new DefaultOAuth2UserService();
         OAuth2User oAuth2User = delegate.loadUser(oAuth2UserRequest);
 
-        // request의 ID와 oAuth2User의 속성(google의 이메일, 개인정보 등)같은 People 엔티티에 필요한 속성만을 뽑아낸다.
+        /* OAuth 인증에 필요한 필드 뽑아내기 */
+        // request에서 OAuth 인증에 필요한 정보들을 뽑아낸다.
+        // (클라이언트 개인의 등록 ID와 이름 속성 키를 뽑아낸다)
         String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId();
         String attributeName = oAuth2UserRequest.getClientRegistration().getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
 
-        // PeopleDto에 필요한 값을 담는다.
+        /* 자유로운 사용을 위해 DTO 객체에 담기 */
+        // 서버 내에서 자유롭게 데이터를 다루기 위해, PeopleDto에 필요한 값을 담는다.
         PeopleDto peopleDto = PeopleDto.builder()
                 .username((String) oAuth2User.getAttributes().get("name"))
                 .email((String) oAuth2User.getAttributes().get("email"))
@@ -48,13 +54,17 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
                 .nameAttributeKey(attributeName)
                 .build();
 
-        // Mapper로 Dto를 Entity로 바꾸고 저장한다.
-        // 왜 바로 Entity에 담지 않을까?
-        // -> 엔티티는 DB와 창구 역할을 하는 객체이므로, 외부 값을 직접 Entity에 담는 것은 좋지 않다.
-        //    Dto를 거쳐 Mapper로 담는 것이 코드의 확작성에도 좋고 보기에도 깔끔하다.
+        /* DB에 저장하기 */
+        // Dto를 Entity로 바꿔서 DB에 업데이트/저장한다.
         People people = savePeople(peopleDto);
+
+        /* Session에 저장하기 */
+        // 저장하고 반환된 객체는 인증된 객체, Principal이다. 따라서 여기서 인증 최소한의 필드만 뽑아서 Session 객체에 담고 Session에 저장한다.
         httpSession.setAttribute("people", new GooglePeople(people));
 
+        /* OAuth 전용 객체 반환하기 */
+        // 필요한 작업이 모두 끝났으면, 메소드 본래의 역할대로 OAuth 전용 객체를 생성하여 반환한다.
+        // (form 기반 인증의 loadUserByName()에서 UserDetails의 구현체와 같은 맥락의 개체이다.)
         return new DefaultOAuth2User(
                 oAuth2User.getAuthorities(),
                 peopleDto.getAttributes(),

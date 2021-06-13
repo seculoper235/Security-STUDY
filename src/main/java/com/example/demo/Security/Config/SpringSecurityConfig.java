@@ -10,7 +10,11 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
 
 import javax.sql.DataSource;
 
@@ -51,55 +55,71 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
          * 스프링 시큐리티에서는 접속 시마다 세션을 새로 발급하는 방법을 제공하며, 이전 세션이 사용 불가능한 newSession()과 가능한 changeSessionId()가 있다. */
         http.sessionManagement()
                 .maximumSessions(1)
-                .maxSessionsPreventsLogin(false)
+                .maxSessionsPreventsLogin(true)
                 .and()
                 .sessionFixation()
-                    .newSession()
-                //.sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                    .changeSessionId()
+                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
         ;
 
         // 로그아웃 관련
         http.logout()
-                .logoutSuccessUrl("/unauth")
+                .logoutSuccessUrl("/logoutSuccess")
         ;
 
         /* 로그인 관련
          * OAuth 인증은 form과 달리 엔드포인트와 연결되는데, 이 엔드포인트에는 Token, Redirection, Authorization, UserInfo 4가지가 있다. */
         http.oauth2Login()
+                .loginPage("/login")
+                .defaultSuccessUrl("/loginSuccess")
                 /* authorizationEndpoint? */
                 // 인증 서버에서 Social 로그인 페이지를 요청하는 EndPoint이다.
                 // baseUri()를 설정하여 Social 로그인 페이지를 요청하는 URI를 설정할 수 있다.
                 // (기본적으로 /oauth2/authorization/{provider}로 정해져 있으며, 구글은 건드릴 필요 없다.)
                 .authorizationEndpoint()
-                .baseUri("/oauth2/auth")
+                    .baseUri("/oauth2/auth")
                 .and()
+
                 /* RedirectionEndpoint? */
                 // 인증 서버에서 Social 로그인 성공 후, 본격적인 OAuth 인증을 어디서 처리할지 설정하는 EndPoint이다.
                 // baseUri()를 설정하여 redirect 페이지를 설정할 수 있다.
                 // 설정이 조금 까다로운데, properties 파일과 Social OAuth와 해당 Endpoint의 baseUri을 모두 설정해줘야 한다.
                 // (기본적으로 /login/oauth2/code/{provider}로 정해져 있으며, 구글은 건드릴 필요 없다.)
-                .redirectionEndpoint()
+                /*.redirectionEndpoint()
                     .baseUri("/login/oauth2/redirect")
-                .and()
+                .and()*/
+
                 /* tokenEndpoint? */
                 // 인증 서버에서 토큰을 처리하기 위한 Endpoint이다.
                 // RedirectionEndpint로부터 받은 authorization_code를 가지고 어플리케이션을 사용할 수 있는 access token을 발급한다.
                 /*.tokenEndpoint()
-                .accessTokenResponseClient(???)
+                    .accessTokenResponseClient(???)
                 .and()*/
+
                 /* userInfoEndpoint? */
                 // 현재 서버에서 사용자의 정보를 어떻게 다루기 위한 Endpoint이다.
                 // OAuth 인증이 끝난 사용자 정보의 DB 업데이트가 진행되는 역할을 맡는다.
                 // 여기서 바로 UserService를 사용하여 사용자를 등록/업데이트 할 수 있으며, 전달받은 OAuth 전용 객체를 Entity로 바꿔 저장하는 loadUser() 메소드가 사용된다.
                 .userInfoEndpoint()
-                .userService(oauthService)
+                    .userService(oauthService)
+        ;
+
+        // 에러 핸들링
+        http.exceptionHandling()
+                /* AuthenticationEntryPoint? */
+                //
+                //.authenticationEntryPoint()
+                //.defaultAuthenticationEntryPointFor()
+                //.accessDeniedHandler()
+                //.defaultAccessDeniedHandlerFor()
+                .accessDeniedPage("/denied")
         ;
 
         // 권한 정보
         http.authorizeRequests()
-                .antMatchers("/auth/admin").hasRole("ADMIN")
-                .antMatchers("/auth/users").hasAnyRole("USER", "ADMIN")
-                .antMatchers("/auth").hasAnyRole("USER", "ADMIN")
+                .antMatchers("/admin").hasRole("ADMIN")
+                .antMatchers("/users").hasAnyRole("USER", "ADMIN")
+                .antMatchers("/").permitAll()
                 .anyRequest().permitAll()
         ;
     }

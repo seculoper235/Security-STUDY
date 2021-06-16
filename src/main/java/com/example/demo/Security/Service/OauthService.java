@@ -5,6 +5,7 @@ import com.example.demo.Domain.People;
 import com.example.demo.Repository.PeopleRepository;
 import com.example.demo.Security.Dto.GooglePeople;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
@@ -14,7 +15,9 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpSession;
+import java.util.Collections;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -65,8 +68,14 @@ public class OauthService implements OAuth2UserService<OAuth2UserRequest, OAuth2
         /* OAuth 전용 객체 반환하기 */
         // 필요한 작업이 모두 끝났으면, 메소드 본래의 역할대로 OAuth 전용 객체를 생성하여 반환한다.
         // (form 기반 인증의 loadUserByName()에서 UserDetails의 구현체와 같은 맥락의 개체이다.)
+
+        /* 권한 변경이 안되는 문제 */
+        // DB의 권한을 ADMIN으로 바꿔도 여전히 권한을 USER로 인식하는 문제.
+        // -> 권한을 oAuth2User가 아닌, DB 엔티티에서 직접 뽑아온다.
         return new DefaultOAuth2User(
-                oAuth2User.getAuthorities(),
+                Collections.unmodifiableSet(people.getAuthorities().stream().map(e ->
+                        new SimpleGrantedAuthority(e.getRole())
+                ).collect(Collectors.toSet())),
                 peopleDto.getAttributes(),
                 peopleDto.getNameAttributeKey());
     }

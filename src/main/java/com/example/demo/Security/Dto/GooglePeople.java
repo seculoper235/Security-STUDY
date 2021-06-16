@@ -19,7 +19,6 @@ public class GooglePeople implements Serializable {
     private final String email;
     private final String image;
 
-    @Builder
     public GooglePeople(People people) {
         this.name = people.getUsername();
         this.email = people.getEmail();

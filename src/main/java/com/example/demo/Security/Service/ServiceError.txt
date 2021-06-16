@@ -1,0 +1,27 @@
+** 1.권한 변경이 안되는 이유?
+/** 설명 **/
+- 작성된 코드를 보면 마지막 DefaultOAuth2User()를 반환할 때, 권한을 OauthUser에서 가져오고 있다. 바로 이 점이 문제가 된다.
+
+- 우선 해당 Service의 메소드는 일단 OauthUser 객체를 반환받기 위해, 제일 먼저 DefaultOAuth2UserService의 loadUser 메소드를 실행한다.
+  이때 Default~~Service.loadUser() 메소드를 자세히 보면, 중간에 authority를 채울 때 다음과 같이 채운다.
+  ***
+  Set<GrantedAuthority> authorities = new LinkedHashSet<>();
+  authorities.add(new OAuth2UserAuthority(userAttributes));
+  ***
+  즉 OAuth2UserAuthority라는 클래스를 이용하여 채우는데, 매개변수를 하나만 주고 생성한다.
+  해당 Authority 객체는 2가지 생성자가 있는데, 하나는 attributes만 받고 나머지는 attributes와 authority를 같이 받는 것이다.
+
+  이때 authority까지 같이 받으면 해당 권한을 지닌 Authority 객체가 생성되지만,
+  attributes만을 입력하면 권한 기본값으로 "ROLE_USER"가 채워져서 생성된다. 즉, 다음과 같다.
+  ***
+  public OAuth2UserAuthority(Map<String, Object> attributes) {
+  	  this("ROLE_USER", attributes);
+  }
+  ***
+  때문에 아무리 DB의 권한이 바뀌었다고 한들, 기존 loadUser() 메소드는 계속 "ROLE_USER"로 객체를 생성하니 권한이 변경되지 않는 것이다!
+
+
+/** 해결법? **/
+- loadUser()를 다시 정의하는 방법도 있겠지만, 너무 영양가 없는 방법이다.
+  따라서 마지막에 DefaultUser를 반환할 때, oAuthUser.getAuthorities()로 default 값의 권한을 가져오지 말고,
+  현재 DB에 저장된 권한 값 즉, savePeople()로 반환된 엔티티에서 뽑아내는 것이 바람직하다.

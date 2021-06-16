@@ -7,10 +7,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.security.core.SpringSecurityCoreVersion;
 import org.springframework.security.core.userdetails.User;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.util.Set;
 
 
@@ -40,7 +37,7 @@ public class People {
 
     private String description;
 
-    @OneToMany(mappedBy = "people")
+    @OneToMany(mappedBy = "people", fetch = FetchType.EAGER)
     private Set<MyAuthority> authorities;
 
     @Builder

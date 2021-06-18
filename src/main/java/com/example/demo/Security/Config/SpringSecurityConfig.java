@@ -1,5 +1,6 @@
 package com.example.demo.Security.Config;
 
+import com.example.demo.Security.Handler.MySuccessHandler;
 import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -12,9 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
 
 import javax.sql.DataSource;
 
@@ -29,6 +27,7 @@ import static com.example.demo.Security.Config.QueryState.SELECT_USER;
  * configure 메소드로 auth를 설정하거나, url 별로 보안을 설정하거나, 보안 필터를 등록하는 등의 보안 관련 모든 설정을 담당한다.
  * 또한 별도의 커스텀 SecurityConfigurer를 생성하고, 이 클래스에 Bean 등록하여 사용할 수 있다. */
 public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
+    private final MySuccessHandler successHandler;
     private final OauthService oauthService;
     private final DataSource dataSource;
 
@@ -71,7 +70,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
          * OAuth 인증은 form과 달리 엔드포인트와 연결되는데, 이 엔드포인트에는 Token, Redirection, Authorization, UserInfo 4가지가 있다. */
         http.oauth2Login()
                 .loginPage("/login")
-                .defaultSuccessUrl("/loginSuccess")
+                .successHandler(successHandler)
+                //.defaultSuccessUrl("/loginSuccess")
                 /* authorizationEndpoint? */
                 // 인증 서버에서 Social 로그인 페이지를 요청하는 EndPoint이다.
                 // baseUri()를 설정하여 Social 로그인 페이지를 요청하는 URI를 설정할 수 있다.

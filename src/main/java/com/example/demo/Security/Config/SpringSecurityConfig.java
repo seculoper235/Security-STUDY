@@ -4,6 +4,7 @@ import com.example.demo.Security.Handler.MySuccessHandler;
 import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -12,7 +13,11 @@ import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import javax.sql.DataSource;
 
@@ -55,10 +60,8 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         http.sessionManagement()
                 .maximumSessions(1)
                 .maxSessionsPreventsLogin(true)
-                .and()
-                .sessionFixation()
-                    .changeSessionId()
-                .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
+                .expiredUrl("/expired")
+                .sessionRegistry(sessionRegistry())
         ;
 
         // 로그아웃 관련
@@ -69,16 +72,16 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         /* 로그인 관련
          * OAuth 인증은 form과 달리 엔드포인트와 연결되는데, 이 엔드포인트에는 Token, Redirection, Authorization, UserInfo 4가지가 있다. */
         http.oauth2Login()
-                .loginPage("/login")
-                .successHandler(successHandler)
-                //.defaultSuccessUrl("/loginSuccess")
+                //.loginPage("/login")
+                //.successHandler(successHandler)
+                .defaultSuccessUrl("/loginSuccess")
                 /* authorizationEndpoint? */
                 // 인증 서버에서 Social 로그인 페이지를 요청하는 EndPoint이다.
                 // baseUri()를 설정하여 Social 로그인 페이지를 요청하는 URI를 설정할 수 있다.
                 // (기본적으로 /oauth2/authorization/{provider}로 정해져 있으며, 구글은 건드릴 필요 없다.)
-                .authorizationEndpoint()
+                /*.authorizationEndpoint()
                     .baseUri("/oauth2/auth")
-                .and()
+                .and()*/
 
                 /* RedirectionEndpoint? */
                 // 인증 서버에서 Social 로그인 성공 후, 본격적인 OAuth 인증을 어디서 처리할지 설정하는 EndPoint이다.
@@ -137,5 +140,15 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    @Bean
+    public static ServletListenerRegistrationBean<?> httpSessionEventPublisher() {
+        return new ServletListenerRegistrationBean<>(new HttpSessionEventPublisher());
     }
 }

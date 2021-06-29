@@ -3,6 +3,7 @@ package com.example.demo.Security.Controller;
 import com.example.demo.Security.Dto.GooglePeople;
 import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -58,6 +59,12 @@ public class SecurityController {
     @GetMapping("/denied")
     public String failOAuth() {
         return "<h2>접근 권한이 없습니다!ㅠㅜ</h2>" +
+                "<button><a href=\"/loginSuccess\">홈페이지로!</a></button>";
+    }
+
+    @GetMapping("/expired")
+    public String expiredOAuth() {
+        return "<h2>이미 로그인 된 아이디 입니다!</h2>" +
                 "<button><a href=\"/loginSuccess\">홈페이지로!</a></button>";
     }
 }

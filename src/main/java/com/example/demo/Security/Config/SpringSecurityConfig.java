@@ -1,10 +1,8 @@
 package com.example.demo.Security.Config;
 
-import com.example.demo.Security.Handler.MySuccessHandler;
 import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
-import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -12,12 +10,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
-import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.session.Session;
+import org.springframework.session.data.redis.RedisIndexedSessionRepository;
+import org.springframework.session.security.SpringSessionBackedSessionRegistry;
 
 import javax.sql.DataSource;
 
@@ -31,8 +27,8 @@ import static com.example.demo.Security.Config.QueryState.SELECT_USER;
  * SecurityConfigurer의 구현체로, 구현체에는 여러 종류가 있는데 Web 상의 보안을 설정하는데 특화되어 있는 추상 클래스이다.
  * configure 메소드로 auth를 설정하거나, url 별로 보안을 설정하거나, 보안 필터를 등록하는 등의 보안 관련 모든 설정을 담당한다.
  * 또한 별도의 커스텀 SecurityConfigurer를 생성하고, 이 클래스에 Bean 등록하여 사용할 수 있다. */
-public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
-    private final MySuccessHandler successHandler;
+public class SpringSecurityConfig<s extends Session> extends WebSecurityConfigurerAdapter {
+    private final RedisIndexedSessionRepository sessionRepository;
     private final OauthService oauthService;
     private final DataSource dataSource;
 
@@ -72,49 +68,13 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         /* 로그인 관련
          * OAuth 인증은 form과 달리 엔드포인트와 연결되는데, 이 엔드포인트에는 Token, Redirection, Authorization, UserInfo 4가지가 있다. */
         http.oauth2Login()
-                //.loginPage("/login")
-                //.successHandler(successHandler)
                 .defaultSuccessUrl("/loginSuccess")
-                /* authorizationEndpoint? */
-                // 인증 서버에서 Social 로그인 페이지를 요청하는 EndPoint이다.
-                // baseUri()를 설정하여 Social 로그인 페이지를 요청하는 URI를 설정할 수 있다.
-                // (기본적으로 /oauth2/authorization/{provider}로 정해져 있으며, 구글은 건드릴 필요 없다.)
-                /*.authorizationEndpoint()
-                    .baseUri("/oauth2/auth")
-                .and()*/
-
-                /* RedirectionEndpoint? */
-                // 인증 서버에서 Social 로그인 성공 후, 본격적인 OAuth 인증을 어디서 처리할지 설정하는 EndPoint이다.
-                // baseUri()를 설정하여 redirect 페이지를 설정할 수 있다.
-                // 설정이 조금 까다로운데, properties 파일과 Social OAuth와 해당 Endpoint의 baseUri을 모두 설정해줘야 한다.
-                // (기본적으로 /login/oauth2/code/{provider}로 정해져 있으며, 구글은 건드릴 필요 없다.)
-                /*.redirectionEndpoint()
-                    .baseUri("/login/oauth2/redirect")
-                .and()*/
-
-                /* tokenEndpoint? */
-                // 인증 서버에서 토큰을 처리하기 위한 Endpoint이다.
-                // RedirectionEndpint로부터 받은 authorization_code를 가지고 어플리케이션을 사용할 수 있는 access token을 발급한다.
-                /*.tokenEndpoint()
-                    .accessTokenResponseClient(???)
-                .and()*/
-
-                /* userInfoEndpoint? */
-                // 현재 서버에서 사용자의 정보를 어떻게 다루기 위한 Endpoint이다.
-                // OAuth 인증이 끝난 사용자 정보의 DB 업데이트가 진행되는 역할을 맡는다.
-                // 여기서 바로 UserService를 사용하여 사용자를 등록/업데이트 할 수 있으며, 전달받은 OAuth 전용 객체를 Entity로 바꿔 저장하는 loadUser() 메소드가 사용된다.
                 .userInfoEndpoint()
                     .userService(oauthService)
         ;
 
         // 에러 핸들링
         http.exceptionHandling()
-                /* AuthenticationEntryPoint? */
-                //
-                //.authenticationEntryPoint()
-                //.defaultAuthenticationEntryPointFor()
-                //.accessDeniedHandler()
-                //.defaultAccessDeniedHandlerFor()
                 .accessDeniedPage("/denied")
         ;
 
@@ -142,7 +102,17 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
         return new BCryptPasswordEncoder();
     }
 
+
+    /* 로그아웃 해도 세션이 삭제되지 않는 이유? */
+    // Redis에 맞지 않는 SessionRegistry를 사용하지 않아서 생긴 일.
+    // ~~Impl은 레포지토리를 사용하지 않으므로, 레포지토리를 사용하는 SpringSessionBackedSessionRegistry를 사용해야 한다.
+    // (레포지토리는 세션 이벤트를 지원하는 RedisIndexedSessionRepository를 사용하는 것이 좋다)
     @Bean
+    public SpringSessionBackedSessionRegistry<?> sessionRegistry() {
+        return new SpringSessionBackedSessionRegistry<>(this.sessionRepository);
+    }
+
+    /*@Bean
     public SessionRegistry sessionRegistry() {
         return new SessionRegistryImpl();
     }
@@ -150,5 +120,5 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     @Bean
     public static ServletListenerRegistrationBean<?> httpSessionEventPublisher() {
         return new ServletListenerRegistrationBean<>(new HttpSessionEventPublisher());
-    }
+    }*/
 }

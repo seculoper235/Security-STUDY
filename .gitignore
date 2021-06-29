@@ -20,6 +20,7 @@ target/
 *.ipr
 src/main/resources/application-oauth.properties
 src/main/resources/application-redis.properties
+src/main/resources/unsolved_problem.txt
 
 ### NetBeans ###
 /nbproject/private/

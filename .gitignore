@@ -19,6 +19,7 @@ target/
 *.iml
 *.ipr
 src/main/resources/application-oauth.properties
+src/main/resources/application-redis.properties
 
 ### NetBeans ###
 /nbproject/private/

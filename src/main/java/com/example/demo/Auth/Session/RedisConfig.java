@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisPassword;
@@ -18,14 +17,16 @@ import org.springframework.session.data.redis.config.annotation.web.http.EnableR
 import org.springframework.session.web.context.AbstractHttpSessionApplicationInitializer;
 
 @Configuration
-@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 60)
+@EnableRedisHttpSession
 @RequiredArgsConstructor
-@PropertySource("classpath:application-redis.properties")
+@PropertySource({"classpath:application-redis.properties"})
 public class RedisConfig extends AbstractHttpSessionApplicationInitializer {
     @Value("${spring.redis.host}")
     private String host;
+
     @Value("${spring.redis.port}")
     private Integer port;
+
     @Value("${spring.redis.password}")
     private String password;
 
@@ -34,14 +35,14 @@ public class RedisConfig extends AbstractHttpSessionApplicationInitializer {
     @Bean
     public RedisConnectionFactory lettuceConnectionFactory() {
         RedisStandaloneConfiguration standaloneConfiguration = new RedisStandaloneConfiguration(host, port);
-        standaloneConfiguration.setPassword(RedisPassword.of(password));
-
+        standaloneConfiguration.setPassword(password.isEmpty() ? RedisPassword.none() : RedisPassword.of(password));
         return new LettuceConnectionFactory(standaloneConfiguration);
     }
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate() {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+
         redisTemplate.setConnectionFactory(lettuceConnectionFactory());
         redisTemplate.setEnableTransactionSupport(true);
         redisTemplate.setKeySerializer(new StringRedisSerializer());

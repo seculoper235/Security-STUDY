@@ -1,24 +1,19 @@
 package com.example.demo.Security.Config;
 
-import com.example.demo.Security.Service.OauthService;
+import com.example.demo.Auth.Token.JwtFilter;
+import com.example.demo.Auth.Token.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.session.Session;
-import org.springframework.session.data.redis.RedisIndexedSessionRepository;
-import org.springframework.session.security.SpringSessionBackedSessionRegistry;
-
-import javax.sql.DataSource;
-
-import static com.example.demo.Security.Config.QueryState.SELECT_AUTH;
-import static com.example.demo.Security.Config.QueryState.SELECT_USER;
 
 @Configuration
 @EnableWebSecurity
@@ -28,36 +23,20 @@ import static com.example.demo.Security.Config.QueryState.SELECT_USER;
  * configure 메소드로 auth를 설정하거나, url 별로 보안을 설정하거나, 보안 필터를 등록하는 등의 보안 관련 모든 설정을 담당한다.
  * 또한 별도의 커스텀 SecurityConfigurer를 생성하고, 이 클래스에 Bean 등록하여 사용할 수 있다. */
 public class SpringSecurityConfig<s extends Session> extends WebSecurityConfigurerAdapter {
-    private final RedisIndexedSessionRepository sessionRepository;
-    private final OauthService oauthService;
-    private final DataSource dataSource;
+    private final JwtProvider jwtProvider;
 
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        // DB를 사용할 수 있도록 먼저 datasource를 입력한다. 해당 데이터 소스는 application.properties에서 작성할 수 있다.
-        // usersBy로 People Entity를 검색하고, authoirutiesBy로 권한 Entity를 검색한다.
-        auth.jdbcAuthentication()
-                .dataSource(dataSource)
-                .rolePrefix("ROLE_")
-                .usersByUsernameQuery(SELECT_USER)
-                .authoritiesByUsernameQuery(SELECT_AUTH)
-                .passwordEncoder(bCryptPasswordEncoder());
-    }
-
-    /* 인증 요청을 받았을 때, 해당 요청을 어떻게 처리할지 흐름을 작성한다 */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable();
+        http.httpBasic().disable();
 
         /* 세션을 관리하기 위한 빌더 패턴이다.
          * 최대 세션은 1개이고, 동시에 세션을 접속할 순 없다.
          * SessionFixation은 세션 고정 공격의 대응 방안을 의미하며, 이 공격은 attacker의 세션 ID로 victim이 로그인 함으로써 세션을 공유하게 되는 공격이다.
          * 스프링 시큐리티에서는 접속 시마다 세션을 새로 발급하는 방법을 제공하며, 이전 세션이 사용 불가능한 newSession()과 가능한 changeSessionId()가 있다. */
+        // 세션을 사용하지 않는 JWT는 HTTP의 무상태성을 가지고 있으므로, 세션 정책도 그에 맞춰준다
         http.sessionManagement()
-                .maximumSessions(1)
-                .maxSessionsPreventsLogin(true)
-                .expiredUrl("/expired")
-                .sessionRegistry(sessionRegistry())
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         ;
 
         // 로그아웃 관련
@@ -65,18 +44,18 @@ public class SpringSecurityConfig<s extends Session> extends WebSecurityConfigur
                 .logoutSuccessUrl("/logoutSuccess")
         ;
 
-        /* 로그인 관련
-         * OAuth 인증은 form과 달리 엔드포인트와 연결되는데, 이 엔드포인트에는 Token, Redirection, Authorization, UserInfo 4가지가 있다. */
-        http.oauth2Login()
-                .defaultSuccessUrl("/loginSuccess")
-                .userInfoEndpoint()
-                    .userService(oauthService)
-        ;
-
         // 에러 핸들링
         http.exceptionHandling()
                 .accessDeniedPage("/denied")
         ;
+
+        // JWT 토큰 적용
+        /* username~ 필터보다 jwt 필터가 앞인 이유?
+         * UsernamePassword 인증 필터는 UserDetailsService와 UserDetails/User를 사용하여 인증을 한다
+         * 하지만 JWT 토큰을 사용하기 위해선 UserDetails를 사용해야 한다
+         * 따라서 Username~ 인증 필터에서 먼저 걸러지지 않기 위해선, JWT 필터는 username 필터 앞쪽에 위치하여 먼저 인증해야 한다
+         */
+        http.addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
 
         // 권한 정보
         http.authorizeRequests()
@@ -101,24 +80,4 @@ public class SpringSecurityConfig<s extends Session> extends WebSecurityConfigur
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-
-    /* 로그아웃 해도 세션이 삭제되지 않는 이유? */
-    // Redis에 맞지 않는 SessionRegistry를 사용하지 않아서 생긴 일.
-    // ~~Impl은 레포지토리를 사용하지 않으므로, 레포지토리를 사용하는 SpringSessionBackedSessionRegistry를 사용해야 한다.
-    // (레포지토리는 세션 이벤트를 지원하는 RedisIndexedSessionRepository를 사용하는 것이 좋다)
-    @Bean
-    public SpringSessionBackedSessionRegistry<?> sessionRegistry() {
-        return new SpringSessionBackedSessionRegistry<>(this.sessionRepository);
-    }
-
-    /*@Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
-    }
-
-    @Bean
-    public static ServletListenerRegistrationBean<?> httpSessionEventPublisher() {
-        return new ServletListenerRegistrationBean<>(new HttpSessionEventPublisher());
-    }*/
 }

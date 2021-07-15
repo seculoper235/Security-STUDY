@@ -28,14 +28,17 @@ import java.util.Set;
 @Component
 @PropertySource({"classpath:application-jwt.properties"})
 public class JwtProvider {
-    @Value("${jwt.secret}")
-    private String secret;
+    private final String secret;
     private final Key secretKey;
     private long tokenValidTime = 30 * 60 * 1000L;
     private final TokenService TokenService;
 
-    public JwtProvider(TokenService TokenService) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(this.secret));
+    // Decode is null 오류?
+    // 그냥 @Value를 넣어주게 되면, 생성자 초기화 당시 secret은 null값이므로 decode의 파라미터가 null이라는 오류가 난다
+    // 따라서 직접 생성자를 작성하여 넣어주되, 생성자 파라미터에 @value를 붙여 "초기화 전"에 값을 넣어준다.
+    public JwtProvider(@Value("${jwt.secret}") String secret, TokenService TokenService) {
+        this.secret = secret;
+        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
         this.TokenService = TokenService;
     }
 

@@ -1,9 +1,7 @@
 package com.example.demo.Security.Controller;
 
 import com.example.demo.Security.Dto.GooglePeople;
-import com.example.demo.Security.Service.OauthService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -12,7 +10,6 @@ import javax.servlet.http.HttpSession;
 @RequiredArgsConstructor
 @RequestMapping(value = "/")
 public class SecurityController {
-    private final OauthService oauthService;
     private final HttpSession httpSession;
 
     @GetMapping
